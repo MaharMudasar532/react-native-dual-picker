@@ -2,8 +2,13 @@ import { useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { useDualPicker } from '../hooks/useDualPicker';
-import type { DualPickerProps, DualPickerRange } from '../types';
+import type {
+  DualPickerProps,
+  DualPickerRange,
+  DualPickerValue,
+} from '../types';
 import { normalizeExternalPair } from '../utils/externalPair';
+import { formatDualPickerTimeMinutes } from '../utils/timeDurationFormat';
 import {
   PickerColumn,
   type PickerColumnHandle,
@@ -26,6 +31,7 @@ export function DualPickerRangeView(props: DualPickerProps) {
     enforceRangeGap = true,
     step,
     formatValue,
+    timeUse12Hour: timeUse12HourProp,
     value,
     onChange,
     itemHeight,
@@ -55,6 +61,9 @@ export function DualPickerRangeView(props: DualPickerProps) {
     dualWheelEndSelectedTextStyle,
     dualWheelStartSelectedCellStyle,
     dualWheelEndSelectedCellStyle,
+    showUnit,
+    unit,
+    unitTextStyle,
   } = props;
 
   const vr = value as DualPickerRange;
@@ -204,6 +213,19 @@ export function DualPickerRangeView(props: DualPickerProps) {
 
   const centerRowTop = Math.floor((visible - 1) / 2) * rowHeight;
 
+  const resolvedFormatValue = useMemo(() => {
+    if (formatValue != null) return formatValue;
+    const o = modeOptions ?? {};
+    if (mode === 'time') {
+      const use12 =
+        timeUse12HourProp !== undefined
+          ? !!timeUse12HourProp
+          : !!o.timeUse12Hour;
+      return (v: DualPickerValue) => formatDualPickerTimeMinutes(v, use12);
+    }
+    return (v: DualPickerValue) => String(v);
+  }, [formatValue, mode, modeOptions, timeUse12HourProp]);
+
   return (
     <View style={[styles.root, style, containerStyle]}>
       <View style={[styles.headerRow, headerRowStyle]}>
@@ -240,9 +262,12 @@ export function DualPickerRangeView(props: DualPickerProps) {
               selectedValue={range.start}
               itemHeight={rowHeight}
               visibleItemCount={visible}
-              formatValue={formatValue}
+              formatValue={resolvedFormatValue}
               onWheelSettled={handleStartWheelSettled}
               testID="dual-picker-start"
+              showUnit={showUnit}
+              unit={unit}
+              unitTextStyle={unitTextStyle}
               {...startColumnProps}
             />
           </View>
@@ -257,9 +282,12 @@ export function DualPickerRangeView(props: DualPickerProps) {
               selectedValue={range.end}
               itemHeight={rowHeight}
               visibleItemCount={visible}
-              formatValue={formatValue}
+              formatValue={resolvedFormatValue}
               onWheelSettled={handleEndWheelSettled}
               testID="dual-picker-end"
+              showUnit={showUnit}
+              unit={unit}
+              unitTextStyle={unitTextStyle}
               {...endColumnProps}
             />
           </View>

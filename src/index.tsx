@@ -29,3 +29,4 @@ export {
   resolveDualPickerCalendarInput,
   nowLocalCalendarParts,
 } from './utils/dualPickerCalendarValue';
+export { formatDualPickerTimeMinutes } from './utils/timeDurationFormat';

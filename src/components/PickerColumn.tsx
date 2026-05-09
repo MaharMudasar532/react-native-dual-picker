@@ -51,6 +51,10 @@ export type PickerColumnProps = {
   /** Inactive wheel row container */
   valueCellStyle?: StyleProp<ViewStyle>;
   selectedValueCellStyle?: StyleProp<ViewStyle>;
+  /** When `true` and `unit` is non-empty, show `unit` after each row’s formatted value. */
+  showUnit?: boolean;
+  unit?: string;
+  unitTextStyle?: StyleProp<TextStyle>;
 };
 
 function defaultFormat(v: DualPickerValue): string {
@@ -77,27 +81,42 @@ export const PickerColumn = forwardRef<PickerColumnHandle, PickerColumnProps>(
       selectedValueTextStyle,
       valueCellStyle,
       selectedValueCellStyle,
+      showUnit,
+      unit,
+      unitTextStyle,
     },
     ref
   ) {
+    const unitSuffix =
+      showUnit && unit != null && String(unit).length > 0 ? String(unit) : null;
     const scrollRef = useRef<any>(null);
     const lastYRef = useRef(0);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const draggingRef = useRef(false);
 
+    const clearSettleTimer = useCallback(() => {
+      if (settleTimerRef.current !== null) {
+        clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+    }, []);
+
     useImperativeHandle(
       ref,
       () => ({
         scrollToOffset(y: number, animated: boolean) {
+          /** Cancel Android `scheduleSettleAfterDrag` — it calls `finalizeOffset(lastYRef)` and would undo this scroll. */
+          clearSettleTimer();
           const maxY =
             values.length <= 0
               ? 0
               : Math.max(0, (values.length - 1) * itemHeight);
           const clamped = Math.min(maxY, Math.max(0, y));
+          lastYRef.current = clamped;
           scrollRef.current?.scrollTo?.({ y: clamped, animated });
         },
       }),
-      [itemHeight, values.length]
+      [clearSettleTimer, itemHeight, values.length]
     );
 
     useEffect(() => {
@@ -128,13 +147,6 @@ export const PickerColumn = forwardRef<PickerColumnHandle, PickerColumnProps>(
       lastYRef.current = y;
       scrollRef.current?.scrollTo?.({ y, animated: false });
     }, [itemHeight, selectedIndex, values.length]);
-
-    const clearSettleTimer = useCallback(() => {
-      if (settleTimerRef.current !== null) {
-        clearTimeout(settleTimerRef.current);
-        settleTimerRef.current = null;
-      }
-    }, []);
 
     const finalizeOffset = useCallback(
       (rawY: number, sourceEvent?: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -277,21 +289,54 @@ export const PickerColumn = forwardRef<PickerColumnHandle, PickerColumnProps>(
                   selected && selectedValueCellStyle,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.itemText,
-                    valueTextStyle,
-                    selected && [
-                      styles.itemTextSelected,
-                      selectedValueTextStyle,
-                    ],
-                  ]}
-                  {...(Platform.OS === 'android' && {
-                    includeFontPadding: false,
-                  })}
-                >
-                  {formatValue(raw)}
-                </Text>
+                {unitSuffix != null ? (
+                  <View style={styles.itemLabelRow}>
+                    <Text
+                      style={[
+                        styles.itemText,
+                        valueTextStyle,
+                        selected && [
+                          styles.itemTextSelected,
+                          selectedValueTextStyle,
+                        ],
+                      ]}
+                      {...(Platform.OS === 'android' && {
+                        includeFontPadding: false,
+                      })}
+                    >
+                      {formatValue(raw)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.itemUnitText,
+                        unitTextStyle,
+                        selected && styles.itemUnitTextSelected,
+                      ]}
+                      {...(Platform.OS === 'android' && {
+                        includeFontPadding: false,
+                      })}
+                    >
+                      {'\u2009'}
+                      {unitSuffix}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.itemText,
+                      valueTextStyle,
+                      selected && [
+                        styles.itemTextSelected,
+                        selectedValueTextStyle,
+                      ],
+                    ]}
+                    {...(Platform.OS === 'android' && {
+                      includeFontPadding: false,
+                    })}
+                  >
+                    {formatValue(raw)}
+                  </Text>
+                )}
               </View>
             );
           })}
@@ -312,6 +357,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  itemLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'nowrap',
+    maxWidth: '100%',
+    paddingHorizontal: 2,
+  },
+  itemUnitText: {
+    fontSize: 13,
+    color: '#AEAEB2',
+    fontWeight: '500',
+  },
+  itemUnitTextSelected: {
+    fontSize: 14,
+    color: '#636366',
+    fontWeight: '600',
+  },
   itemSelected: {
     backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 0,
@@ -319,10 +382,12 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 17,
     color: '#8E8E93',
+    letterSpacing: 0,
   },
   itemTextSelected: {
     fontSize: 20,
     color: '#000',
+    letterSpacing: 0,
     /** `600` is easy to mistake for regular on small caps — `700`/`bold` reads clearly in wheel pickers. */
     fontWeight: Platform.select({
       ios: '700',

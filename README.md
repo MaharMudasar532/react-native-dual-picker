@@ -1,6 +1,6 @@
 # React Native Dual Picker (Range, Date, Bottom Sheet)
 
-**Dual wheel picker** for **React Native** (iOS & Android): choose a **from** and **to** value with two side‑by‑side **scroll wheels**. Supports **numeric range**, **date / calendar range** (year · month · day), **month**, **day of month**, **weekday**, **year**, **alphabet**, and **decimal** modes—with **min/max gap** rules, **clamp** behaviors, optional **bottom sheet** presentation, and full **TypeScript** typings.
+**Dual wheel picker** for **React Native** (iOS & Android): choose a **from** and **to** value with two side‑by‑side **scroll wheels**. Supports **numeric range**, **custom string lists** (e.g. cities), **time range** (24h / 12h), **date / calendar** (year · month · day), **month**, **day**, **weekday**, **year**, **alphabet**, and **decimal** — plus **min/max gap**, **clamp** behaviors, optional **unit suffix**, **bottom sheet** presentation, and full **TypeScript**.
 
 > **Keywords:** `react-native` · `dual-picker` · `range-picker` · `wheel-picker` · `scroll-picker` · `date-range-picker` · `calendar-picker` · `month-picker` · `day-picker` · `bottom-sheet` · `two-column-picker` · `from-to-picker` · `react-native-ui` · `ios` · `android`
 
@@ -18,16 +18,40 @@ React Native Dual Picker is a production-ready **React Native range picker** and
 ## Demos (GIFs)
 
 <p align="center">
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/withoutbottom.gif" alt="Dual picker inline demo — without bottom sheet" width="47%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/dual.gif" alt="Dual picker — overview" width="32%" />
   &nbsp;
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/bottomsheet.gif" alt="Dual picker bottom sheet demo" width="47%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/withoutbottom.gif" alt="Dual picker inline — no bottom sheet" width="32%" />
+  &nbsp;
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/bottomsheet.gif" alt="Dual picker bottom sheet" width="32%" />
 </p>
 
-<p align="center"><em>Left: inline picker · Right: bottom sheet picker.</em></p>
+<p align="center"><em><code>dual.gif</code> · inline · bottom sheet</em></p>
 
 ---
 
-## Screenshots
+## Gallery (modes & presets)
+
+Use cases below map to these assets (also in the repo root):
+
+<p align="center">
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/24h_time.png" alt="Time range 24-hour" width="24%" />
+  &nbsp;
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/12h_time.png" alt="Time range 12-hour" width="24%" />
+  &nbsp;
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/a-z.png" alt="Alphabet mode A–Z" width="24%" />
+  &nbsp;
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/cities.png" alt="Cities string range" width="24%" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/bottom_sheet_12h.png" alt="Bottom sheet with 12-hour time" width="45%" />
+</p>
+
+<p align="center"><sub><code>24h_time.png</code> · <code>12h_time.png</code> · <code>a-z.png</code> · <code>cities.png</code> · <code>bottom_sheet_12h.png</code></sub></p>
+
+---
+
+## Screenshots (older build)
 
 <p align="center">
   <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778299828.png" alt="Dual picker — presets and calendar modes" width="32%" />
@@ -38,15 +62,7 @@ React Native Dual Picker is a production-ready **React Native range picker** and
 </p>
 
 <p align="center">
-  <sub>Row 1: presets / calendar · date layouts · From–To range</sub>
-</p>
-
-<p align="center">
   <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778300880.png" alt="Dual picker — bottom sheet with grabber, title, close, wheels" width="70%" />
-</p>
-
-<p align="center">
-  <sub>Bottom sheet: drag handle, centered title, × dismiss, synchronized wheels</sub>
 </p>
 
 ### Media URLs (GIF & PNGs)
@@ -69,6 +85,17 @@ If a thumbnail still breaks: confirm the repo is **public**, the files exist on 
 - **Partial `value`** for date mode + **`modeOptions.defaultCalendar*`** fallbacks + local “today”  
 - **`presentation="sheet"`** — modal, animated backdrop, swipe-to-dismiss, customizable chrome  
 - **`PickerColumn`**, **`useDualPicker`** for custom UIs  
+
+---
+
+## Roadmap
+
+If you want to turn this into a roadmap, a sane order is:
+
+1. **`mode="time"`** — From/To time range (implemented); optional 12h/24h via props.
+2. **Generic columns** — refactor internals once you have 2–3 column types.
+3. **Infinite scroll** — after the column API stabilizes.
+4. **Snap animation pass** — can ship incrementally alongside (1).
 
 ---
 
@@ -97,7 +124,316 @@ Peers: **`react`**, **`react-native`** (see `package.json`).
 
 ---
 
-## Quick start
+## Developer cookbook — copy & paste
+
+Use **`https://github.com/…/raw/master/…`** (or the [jsDelivr mirror](https://cdn.jsdelivr.net/gh/MaharMudasar532/react-native-dual-picker@master/dual.gif)) for the same assets as in the gallery above. Replace the repo path if you use a fork.
+
+All snippets assume:
+
+```tsx
+import { useState } from 'react';
+import { DualPicker } from 'react-native-dual-picker';
+```
+
+and a controlled `value` + `onChange` unless noted.
+
+### 1) Numeric range (From / To)
+
+`minGap` / `maxGap` are the **numeric difference** between `start` and `end` when the list is all numbers.
+
+```tsx
+const DATA = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+<DualPicker
+  mode="range"
+  data={DATA}
+  value={{ start: 10, end: 18 }}
+  minGap={1}
+  maxGap={12}
+  clampBehavior="push-end"
+  autoShiftEnd
+  startLabel="From"
+  endLabel="To"
+  formatValue={(v) => String(v)}
+  onChange={(range) => console.log(range)}
+/>
+```
+
+### 2) Numeric range + unit suffix (`showUnit`)
+
+Appends a label after every row value (good for plain numbers; skip for `mode="time"` built-in labels).
+
+```tsx
+<DualPicker
+  mode="range"
+  data={[10, 11, 12, 13, 14, 15]}
+  value={{ start: 11, end: 14 }}
+  minGap={1}
+  maxGap={8}
+  showUnit
+  unit="pts"
+  formatValue={(v) => String(v)}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### 3) String list — cities (or any labels)
+
+`data` must be **all strings** (non-empty) or **all numbers** — not mixed. Gaps use **wheel index steps** automatically (`gapBasis: 'index'`).
+
+```tsx
+const CITIES = [
+  'London',
+  'Paris',
+  'Tokyo',
+  'Sydney',
+  'Dubai',
+  'New York',
+  'Berlin',
+];
+
+<DualPicker
+  mode="range"
+  data={CITIES}
+  value={{ start: 'Paris', end: 'Berlin' }}
+  minGap={1}
+  maxGap={5}
+  startLabel="From"
+  endLabel="To"
+  formatValue={(v) => String(v)}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### 4) Alphabet (`a–z` / `A–Z`)
+
+```tsx
+<DualPicker
+  mode="alphabet"
+  value={{ start: 'a', end: 'f' }}
+  minGap={1}
+  maxGap={10}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+Uppercase: `modeOptions={{ alphabetUpperCase: true }}`.
+
+### 5) Decimal steps
+
+```tsx
+<DualPicker
+  mode="decimal"
+  modeOptions={{ decimalFrom: 0, decimalTo: 2, decimalStep: 0.1 }}
+  value={{ start: 0, end: 0.5 }}
+  minGap={1}
+  maxGap={8}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### 6) Month · day · year · weekday
+
+```tsx
+// Month (1–12 or localized names)
+<DualPicker
+  mode="month"
+  modeOptions={{ monthStyle: 'number' }}
+  value={{ start: 3, end: 9 }}
+  minGap={1}
+  maxGap={12}
+  onChange={(r) => console.log(r)}
+/>
+
+// Day of month (not calendar mode)
+<DualPicker
+  mode="day"
+  modeOptions={{ dayFrom: 1, dayTo: 31 }}
+  value={{ start: 5, end: 18 }}
+  minGap={1}
+  maxGap={20}
+  onChange={(r) => console.log(r)}
+/>
+
+// Year list
+<DualPicker
+  mode="year"
+  modeOptions={{ yearFrom: 2020, yearTo: 2035 }}
+  value={{ start: 2026, end: 2029 }}
+  minGap={1}
+  maxGap={8}
+  onChange={(r) => console.log(r)}
+/>
+
+// Weekday: 0–6 (JS Sunday=0) or names
+<DualPicker
+  mode="weekday"
+  modeOptions={{ weekdayStyle: 'short', weekdayFirstDay: 1 }}
+  value={{ start: 1, end: 5 }}
+  minGap={1}
+  maxGap={4}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### 7) Time range — 24-hour vs 12-hour
+
+Values are **minutes since midnight** (`0` … `1439`). Use root **`timeUse12Hour`** (wins over `modeOptions.timeUse12Hour`) or omit and set only `modeOptions`.
+
+**24-hour (`24h_time.png`):**
+
+```tsx
+<DualPicker
+  mode="time"
+  timeUse12Hour={false}
+  modeOptions={{ timeStepMinutes: 15 }}
+  value={{ start: 540, end: 1020 }}
+  minGap={1}
+  maxGap={480}
+  startLabel="From"
+  endLabel="To"
+  onChange={(r) => console.log(r)}
+/>
+```
+
+**12-hour (`12h_time.png`):**
+
+```tsx
+<DualPicker
+  mode="time"
+  timeUse12Hour
+  modeOptions={{ timeStepMinutes: 15 }}
+  value={{ start: 540, end: 1020 }}
+  minGap={1}
+  maxGap={480}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+Optional: `import { formatDualPickerTimeMinutes } from 'react-native-dual-picker'` for labels outside the picker.
+
+### 8) Calendar date range (`mode="date"`)
+
+`minGap` / `maxGap` are **whole UTC calendar days** between `start` and `end`. Pick a large enough `maxGap` for multi-year ranges (e.g. trip planners).
+
+```tsx
+<DualPicker
+  mode="date"
+  value={{
+    start: { year: 2026, month: 5, day: 9 },
+    end: { year: 2026, month: 8, day: 20 },
+  }}
+  modeOptions={{
+    dateFormat: 'iso',
+    monthStyle: 'short',
+    yearFrom: 2000,
+    yearTo: 2035,
+  }}
+  minGap={1}
+  maxGap={3650}
+  startLabel="From"
+  endLabel="To"
+  onChange={(range) => console.log(range)}
+/>
+```
+
+**EU / US column order:** `modeOptions={{ dateFormat: 'eu' }}` or `'us'`.
+
+**Partial `value`:** halves may omit `year` / `month` / `day`; defaults use `modeOptions.defaultCalendar*` then **today** (local). Normalize for display:
+
+```tsx
+import { normalizeDualPickerCalendarValue } from 'react-native-dual-picker';
+
+const canonical = normalizeDualPickerCalendarValue(
+  { start: {}, end: {} },
+  modeOptions,
+  1,
+  3650
+);
+```
+
+### 9) Bottom sheet — numeric range
+
+Same as inline, plus `presentation`, `sheetVisible`, `onSheetVisibleChange`, and optional sheet chrome props.
+
+```tsx
+const [open, setOpen] = useState(false);
+const [value, setValue] = useState({ start: 10, end: 18 });
+
+<>
+  <Pressable onPress={() => setOpen(true)}><Text>Open</Text></Pressable>
+  <DualPicker
+    mode="range"
+    data={[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]}
+    value={value}
+    minGap={1}
+    maxGap={12}
+    presentation="sheet"
+    sheetVisible={open}
+    onSheetVisibleChange={setOpen}
+    sheetTitle="Choose range"
+    sheetSwipeToDismiss
+    onChange={(next) => setValue(next as typeof value)}
+  />
+</>
+```
+
+### 10) Bottom sheet + 12h time (`bottom_sheet_12h.png`)
+
+```tsx
+const [open, setOpen] = useState(false);
+const [value, setValue] = useState({ start: 540, end: 1020 });
+
+<DualPicker
+  mode="time"
+  timeUse12Hour
+  modeOptions={{ timeStepMinutes: 15 }}
+  value={value}
+  minGap={1}
+  maxGap={480}
+  presentation="sheet"
+  sheetVisible={open}
+  onSheetVisibleChange={setOpen}
+  sheetTitle="Time range"
+  onChange={(next) => setValue(next as typeof value)}
+/>
+```
+
+### 11) Independent wheels (`end` may be before `start`)
+
+```tsx
+<DualPicker
+  mode="range"
+  data={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+  value={{ start: 9, end: 2 }}
+  enforceRangeGap={false}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### 12) Force gap basis (`gapBasis`)
+
+Usually inferred: **`index`** if any wheel item is a string, else **`value`**. Override if needed:
+
+```tsx
+<DualPicker
+  mode="range"
+  data={[1, 2, 3, 4, 5]}
+  gapBasis="index"
+  minGap={1}
+  maxGap={3}
+  value={{ start: 2, end: 5 }}
+  onChange={(r) => console.log(r)}
+/>
+```
+
+### Full runnable matrix
+
+`example/src/App.tsx` implements every mode (including chips for **date layout**, **24h/12h time**, and a **second** `DualPicker` in a sheet).
+
+---
+
+## Quick start (minimal)
 
 ```tsx
 import { DualPicker } from 'react-native-dual-picker';
@@ -112,7 +448,9 @@ import { DualPicker } from 'react-native-dual-picker';
 />
 ```
 
-### Calendar (`mode="date"`)
+See **Developer cookbook** above for time, cities, calendar, sheet, and more.
+
+### Calendar (`mode="date"`) — short
 
 ```tsx
 <DualPicker
@@ -128,12 +466,12 @@ import { DualPicker } from 'react-native-dual-picker';
     yearTo: 2035,
   }}
   minGap={1}
-  maxGap={400}
+  maxGap={3650}
   onChange={(range) => console.log(range)}
 />
 ```
 
-Helpers (exported): **`normalizeDualPickerCalendarValue(value, modeOptions, minGap, maxGap?, enforceRangeGap?)`**, **`resolveDualPickerCalendarInput`**, **`nowLocalCalendarParts`**, **`calendarYearBoundsFromOptions`**.
+Helpers (exported): **`normalizeDualPickerCalendarValue`**, **`resolveDualPickerCalendarInput`**, **`nowLocalCalendarParts`**, **`calendarYearBoundsFromOptions`**.
 
 ---
 
@@ -172,120 +510,15 @@ Use **`normalizeDualPickerCalendarValue(..., enforceRangeGap)`** if you mirror t
 
 ## More examples
 
-### Bottom sheet (`presentation="sheet"`)
+**Bottom sheet:** full copy-paste snippets are in **Developer cookbook** §9 (numeric) and §10 (12h time). Behavior notes:
 
-With **`presentation="sheet"`**, `DualPicker` wraps the picker in React Native’s **`Modal`**: dimmed **backdrop**, **grabber**, **header** (title + close or Done), and optional **swipe-down** dismiss. Use **controlled** visibility: **`sheetVisible`** + **`onSheetVisibleChange`**.
+- **`sheetVisible`** + **`onSheetVisibleChange`** control the `Modal`.
+- Backdrop tap closes unless **`sheetBackdropDismissDisabled`**.
+- **`onSheetDonePress`** runs for **× / Done** — not for backdrop-only or swipe dismiss (see props table below).
 
-Mount **one** sheet instance (often near the root of the screen); open it with **`setOpen(true)`**. Tapping the **backdrop** closes by default (set **`sheetBackdropDismissDisabled`** to disable). **`onSheetDonePress`** runs only when the user dismisses via the **header × or Done** button — not when closing from the backdrop, swipe-to-dismiss, or Android back (`onRequestClose`).
+**Alphabet / decimal / month / cities / time:** see cookbook §4–§8.
 
-```tsx
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { DualPicker } from 'react-native-dual-picker';
-
-const DATA = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-
-function SheetExample() {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState({ start: 10, end: 18 });
-
-  return (
-    <View style={styles.screen}>
-      <Pressable style={styles.openBtn} onPress={() => setOpen(true)}>
-        <Text style={styles.openBtnText}>Open range picker</Text>
-      </Pressable>
-
-      <DualPicker
-        mode="range"
-        data={DATA}
-        value={value}
-        minGap={1}
-        maxGap={12}
-        clampBehavior="push-end"
-        autoShiftEnd
-        startLabel="From"
-        endLabel="To"
-        formatValue={(v) => String(v)}
-        presentation="sheet"
-        sheetVisible={open}
-        onSheetVisibleChange={setOpen}
-        sheetTitle="Choose range"
-        sheetTitleStyle={styles.sheetTitle}
-        sheetBackdropStyle={styles.sheetBackdrop}
-        sheetCardStyle={styles.sheetCard}
-        sheetPickerWrapperStyle={styles.sheetPickerPad}
-        sheetHeaderTrailing="close"
-        sheetSwipeToDismiss
-        onSheetDonePress={() => {
-          /* optional: runs only when user taps × or Done (not backdrop / swipe) */
-        }}
-        onChange={(next) => setValue(next as typeof value)}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 24, justifyContent: 'center' },
-  openBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#007AFF',
-    alignSelf: 'center',
-  },
-  openBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  sheetBackdrop: { backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheetCard: {
-    backgroundColor: '#E8E8ED',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  sheetPickerPad: { paddingHorizontal: 8, marginBottom: 4 },
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.41,
-    color: '#1C1C1E',
-  },
-});
-```
-
-**Calendar in a sheet:** same pattern — set **`mode="date"`**, pass **`modeOptions`**, and keep **`presentation="sheet"`** + **`sheetVisible`** / **`onSheetVisibleChange`**. See **`example/src/App.tsx`** for a second `DualPicker` that mirrors the inline preset in sheet form.
-
-### Alphabet, decimal, month (preset modes)
-
-```tsx
-<DualPicker
-  mode="alphabet"
-  value={{ start: 'a', end: 'f' }}
-  minGap={1}
-  maxGap={10}
-  onChange={(r) => console.log(r)}
-/>
-
-<DualPicker
-  mode="decimal"
-  modeOptions={{ decimalFrom: 0, decimalTo: 2, decimalStep: 0.1 }}
-  value={{ start: 0, end: 0.5 }}
-  minGap={1}
-  maxGap={8}
-  onChange={(r) => console.log(r)}
-/>
-
-<DualPicker
-  mode="month"
-  modeOptions={{ monthStyle: 'number' }}
-  value={{ start: 3, end: 9 }}
-  minGap={1}
-  maxGap={24}
-  onChange={(r) => console.log(r)}
-/>
-```
-
-### Partial calendar `value` + normalization helper
-
-Halves may omit `year` / `month` / `day`; defaults come from **`modeOptions.defaultCalendar*`** then **today** (local). To display a canonical range in your UI:
+### Partial calendar `value` + normalization
 
 ```tsx
 import {
@@ -300,16 +533,12 @@ const modeOptions = {
   yearTo: 2035,
 };
 
-const raw = {
-  start: {},
-  end: {},
-};
+const raw = { start: {}, end: {} };
 
-const canonical = normalizeDualPickerCalendarValue(raw, modeOptions, 1, 400);
-// canonical.start / canonical.end are full { year, month, day }
+const canonical = normalizeDualPickerCalendarValue(raw, modeOptions, 1, 3650);
 ```
 
-The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **sheet** instance) lives in **`example/src/App.tsx`**.
+The runnable **preset matrix** (every mode, date ISO/EU/US chips, 24h/12h time, sheet instance) is **`example/src/App.tsx`**.
 
 ---
 
@@ -317,7 +546,7 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 
 | Value | Description |
 | ----- | ----------- |
-| `range` | Numeric list from **`data`** (prefer over legacy `dual`). |
+| `range` | List from **`data`**: **all numbers** (sorted) **or** **all strings** (order preserved; gaps use **index**). Prefer over legacy `dual`. |
 | `dual` | Legacy alias for **`range`**. |
 | `date` | Six calendar wheels (start/end × Y/M/D). |
 | `day` | Day-of-month list (`modeOptions.dayFrom` / `dayTo`). |
@@ -326,6 +555,7 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 | `weekday` | Weekday list (`weekdayStyle`, `weekdayLocale`, `weekdayFirstDay`). |
 | `alphabet` | a–z / A–Z (`alphabetUpperCase`). |
 | `decimal` | Stepped decimals (`decimalFrom`, `decimalTo`, `decimalStep`). |
+| `time` | Minutes since midnight (`0`…`1439`); **`timeUse12Hour`** / **`modeOptions.timeUse12Hour`**, **`timeStepMinutes`**. |
 
 ---
 
@@ -347,6 +577,8 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 | `defaultCalendarYear` | `number` | Fallback when a **`value`** half omits **year**. |
 | `defaultCalendarMonth` | `number` | Fallback when **month** omitted (`1–12`). |
 | `defaultCalendarDay` | `number` | Fallback when **day** omitted. |
+| `timeStepMinutes` | `number` | **`mode="time"`**: step 1–60; default `15`. |
+| `timeUse12Hour` | `boolean` | **`mode="time"`**: 12h labels; overridden by root **`timeUse12Hour`** when set. |
 
 ---
 
@@ -359,7 +591,7 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 | **`mode`** | `DualPickerMode` | **required** | Wheel preset (see table above). |
 | **`value`** | `DualPickerRange` \| `DualPickerCalendarRange` \| `DualPickerCalendarRangeInput` | **required** | For **`date`**, halves may omit `year`/`month`/`day`; resolved via **`modeOptions.defaultCalendar*`** then local date. **`onChange`** always receives full `DualPickerCalendarRange`. |
 | **`onChange`** | `(range, meta?) => void` | — | `meta.reason`: `DualPickerChangeReason`. |
-| **`data`** | `DualPickerValue[]` | — | Required for **`range`** / **`dual`**. |
+| **`data`** | `DualPickerValue[]` | — | Required for **`range`** / **`dual`**: all **numbers** or all **non-empty strings** (e.g. cities). |
 | **`modeOptions`** | `DualPickerModeOptions` | — | Bounds & locales for preset modes. |
 | **`minGap`** / **`maxGap`** | `number` | — | Min/max spacing between start and end (meaning depends on **`gapBasis`** and mode). Ignored when **`enforceRangeGap={false}`**. |
 | **`enforceRangeGap`** | `boolean` | `true` | **`false`** = independent wheels; **`end` may be smaller than `start`**; gap props ignored. |
@@ -368,6 +600,10 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 | **`clampBehavior`** | `'push-end' \| 'push-start' \| 'lock'` | — | How to satisfy gap when one end moves. |
 | **`autoShiftEnd`** | `boolean` | `true` | If **`push-end`**, moving start can push end forward. |
 | **`formatValue`** | `(DualPickerValue) => string` | — | Wheel label formatter. |
+| **`timeUse12Hour`** | `boolean` | — | **`mode="time"`** only: `true` → 12h labels; overrides `modeOptions.timeUse12Hour`. |
+| **`showUnit`** | `boolean` | `false` | Append **`unit`** after each row label. |
+| **`unit`** | `string` | — | Suffix when **`showUnit`** (e.g. `kg`, `pts`). |
+| **`unitTextStyle`** | `TextStyle` | — | Style for the suffix text. |
 
 ### Layout & shared styling
 
@@ -494,6 +730,8 @@ The runnable **preset matrix** (chips for every mode, ISO/EU/US, and a second **
 **`PickerColumnHandle`**: `{ scrollToOffset(y, animated) }`.
 
 **`useDualPicker`** — headless logic for custom two-column UIs (see source / typings).
+
+**`formatDualPickerTimeMinutes(value, use12Hour)`** — exported helper for matching time labels outside the picker.
 
 ---
 

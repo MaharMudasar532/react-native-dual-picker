@@ -42,6 +42,17 @@ import {
 const DEFAULT_VISIBLE = 5;
 const PROGRAMMATIC_SETTLE_WINDOW_MS = 700;
 
+/** Set to `false` to silence date-wheel debug logs in dev. */
+const DEBUG_CALENDAR = __DEV__;
+
+function calLog(...args: unknown[]) {
+  if (DEBUG_CALENDAR) console.log('[DualPickerCalendar]', ...args);
+}
+
+function partsLabel(p: CalendarDateParts): string {
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+}
+
 function scheduleDoubleRaf(cb: () => void): number {
   return requestAnimationFrame(() => {
     requestAnimationFrame(cb);
@@ -193,6 +204,14 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
     )
   );
 
+  /**
+   * Latest committed calendar range for wheel handlers. Updated synchronously in `emit` and when
+   * syncing from props so back-to-back `onWheelSettled` calls (before re-render) never read a stale
+   * `range` and clobber another column’s update — which desyncs scroll vs selection on one side.
+   */
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
+
   const ref0 = useRef<PickerColumnHandle>(null);
   const ref1 = useRef<PickerColumnHandle>(null);
   const ref2 = useRef<PickerColumnHandle>(null);
@@ -275,6 +294,10 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
       order: readonly CalendarField[],
       animated: boolean
     ) => {
+      calLog('scrollHalf', baseIx === 0 ? 'FROM' : 'TO', partsLabel(parts), {
+        order: [...order],
+        animated,
+      });
       for (let slot = 0; slot < 3; slot++) {
         const field = order[slot]!;
         const wheelIx = (baseIx + slot) as 0 | 1 | 2 | 3 | 4 | 5;
@@ -297,12 +320,20 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
   const lastSyncedKey = useRef<string | null>(null);
   useLayoutEffect(() => {
     const norm = calendarValueNormalized;
+    calLog('propSyncEffect:enter', {
+      norm: `${partsLabel(norm.start)} … ${partsLabel(norm.end)}`,
+      rangeRef: `${partsLabel(rangeRef.current.start)} … ${partsLabel(rangeRef.current.end)}`,
+    });
 
     const pending = pendingControlledCalendarEmitRef.current;
     if (pending != null) {
       const parentCaughtUp =
         partsEqual(norm.start, pending.start) &&
         partsEqual(norm.end, pending.end);
+      calLog('propSyncEffect:pending', {
+        parentCaughtUp,
+        pending: `${partsLabel(pending.start)} … ${partsLabel(pending.end)}`,
+      });
       if (parentCaughtUp) {
         pendingControlledCalendarEmitRef.current = null;
         calendarValueSnapshotBeforeEmitRef.current = null;
@@ -313,6 +344,7 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
           fmt,
         });
         lastSyncedKey.current = key;
+        rangeRef.current = norm;
         setRange(norm);
         scrollHalf(0, norm.start, tripleOrder, false);
         scrollHalf(3, norm.end, tripleOrder, false);
@@ -326,6 +358,10 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
         partsEqual(calendarValueNormalized.end, snap.end);
 
       if (parentStillStale) {
+        calLog('propSyncEffect:parentStillStale → scroll rangeRef');
+        const r = rangeRef.current;
+        scrollHalf(0, r.start, tripleOrder, false);
+        scrollHalf(3, r.end, tripleOrder, false);
         return;
       }
 
@@ -339,16 +375,46 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
       yMax,
       fmt,
     });
-    if (lastSyncedKey.current === key) return;
+    if (lastSyncedKey.current === key) {
+      calLog('propSyncEffect:skip (lastSyncedKey === key)');
+      return;
+    }
+    calLog('propSyncEffect:apply norm → setRange + scrollHalf');
     lastSyncedKey.current = key;
+    rangeRef.current = norm;
     setRange(norm);
     scrollHalf(0, norm.start, tripleOrder, false);
     scrollHalf(3, norm.end, tripleOrder, false);
   }, [calendarValueNormalized, fmt, scrollHalf, tripleOrder, yMax, yMin]);
 
+  /**
+   * After user scroll commits, `setRange` updates but `calendarValueNormalized` often stays the same until the parent
+   * passes a new `value`, so the effect above does not re-run and `scrollHalf` never runs — wheels stay misaligned
+   * with `selectedValue` (wrong row in the band vs bold text). Always snap wheels to local `range` when it changes.
+   */
+  useLayoutEffect(() => {
+    const r = rangeRef.current;
+    calLog('rangeSnapEffect', `${partsLabel(r.start)} … ${partsLabel(r.end)}`);
+    scrollHalf(0, r.start, tripleOrder, false);
+    scrollHalf(3, r.end, tripleOrder, false);
+  }, [
+    range.start.day,
+    range.start.month,
+    range.start.year,
+    range.end.day,
+    range.end.month,
+    range.end.year,
+    scrollHalf,
+    tripleOrder,
+  ]);
+
   const emit = useCallback(
     (next: DualPickerCalendarRange, reason: DualPickerChangeReason) => {
       const v = calendarValuePropRef.current;
+      calLog('emit', reason, {
+        from: `${partsLabel(next.start)} … ${partsLabel(next.end)}`,
+        propWas: `${partsLabel(v.start)} … ${partsLabel(v.end)}`,
+      });
       calendarValueSnapshotBeforeEmitRef.current = {
         start: { ...v.start },
         end: { ...v.end },
@@ -357,6 +423,7 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
         start: { ...next.start },
         end: { ...next.end },
       };
+      rangeRef.current = next;
       setRange(next);
       onChange?.(next, { reason });
     },
@@ -391,20 +458,27 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
   const handleStartField = useCallback(
     (slot: 0 | 1 | 2, picked: number) => {
       const ix = slot as 0 | 1 | 2;
-      if (consumeOrClearProgrammaticSettle(ix, picked)) return;
+      if (consumeOrClearProgrammaticSettle(ix, picked)) {
+        calLog('handleStartField:ignored (programmatic settle)', {
+          slot,
+          picked,
+        });
+        return;
+      }
       const field = tripleOrder[slot]!;
-      let nextStart: CalendarDateParts = { ...range.start };
+      const r = rangeRef.current;
+      let nextStart: CalendarDateParts = { ...r.start };
       if (field === 'year') nextStart.year = picked;
       else if (field === 'month') nextStart.month = picked;
       else nextStart.day = picked;
       nextStart = clampPartsToYearRange(clampDateParts(nextStart), yMin, yMax);
 
-      const prevS = { ...range.start };
-      const prevE = { ...range.end };
+      const prevS = { ...r.start };
+      const prevE = { ...r.end };
       const res = applyCalendarStartWheel(
         nextStart,
-        range.start,
-        range.end,
+        r.start,
+        r.end,
         minGap,
         maxGap,
         clampBehavior,
@@ -412,6 +486,7 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
         enforceRangeGap
       );
       if (res.lockReject) {
+        calLog('handleStartField:lockReject → revert scroll');
         scrollHalf(0, prevS, tripleOrder, true);
         scrollHalf(3, prevE, tripleOrder, true);
         return;
@@ -422,6 +497,15 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
         emit(res, reasonStart(res.constraint));
         scrollHalf(0, res.start, tripleOrder, true);
         scrollHalf(3, res.end, tripleOrder, true);
+      } else {
+        calLog('handleStartField:unchanged after clamp → snap wheels', {
+          field,
+          picked,
+          committed: `${partsLabel(res.start)} … ${partsLabel(res.end)}`,
+        });
+        /** Picked value violated gap/order but repaired range equals previous — ScrollView still shows the pick. */
+        scrollHalf(0, res.start, tripleOrder, false);
+        scrollHalf(3, res.end, tripleOrder, false);
       }
     },
     [
@@ -432,8 +516,6 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
       enforceRangeGap,
       maxGap,
       minGap,
-      range.end,
-      range.start,
       scrollHalf,
       tripleOrder,
       yMax,
@@ -444,26 +526,34 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
   const handleEndField = useCallback(
     (slot: 0 | 1 | 2, picked: number) => {
       const ix = (3 + slot) as 3 | 4 | 5;
-      if (consumeOrClearProgrammaticSettle(ix, picked)) return;
+      if (consumeOrClearProgrammaticSettle(ix, picked)) {
+        calLog('handleEndField:ignored (programmatic settle)', {
+          slot,
+          picked,
+        });
+        return;
+      }
       const field = tripleOrder[slot]!;
-      let nextEnd: CalendarDateParts = { ...range.end };
+      const r = rangeRef.current;
+      let nextEnd: CalendarDateParts = { ...r.end };
       if (field === 'year') nextEnd.year = picked;
       else if (field === 'month') nextEnd.month = picked;
       else nextEnd.day = picked;
       nextEnd = clampPartsToYearRange(clampDateParts(nextEnd), yMin, yMax);
 
-      const prevS = { ...range.start };
-      const prevE = { ...range.end };
+      const prevS = { ...r.start };
+      const prevE = { ...r.end };
       const res = applyCalendarEndWheel(
         nextEnd,
-        range.start,
-        range.end,
+        r.start,
+        r.end,
         minGap,
         maxGap,
         clampBehavior,
         enforceRangeGap
       );
       if (res.lockReject) {
+        calLog('handleEndField:lockReject → revert scroll');
         scrollHalf(0, prevS, tripleOrder, true);
         scrollHalf(3, prevE, tripleOrder, true);
         return;
@@ -474,6 +564,19 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
         emit(res, reasonEnd(res.constraint));
         scrollHalf(0, res.start, tripleOrder, true);
         scrollHalf(3, res.end, tripleOrder, true);
+      } else {
+        calLog('handleEndField:unchanged after clamp → snap wheels', {
+          field,
+          picked,
+          committed: `${partsLabel(res.start)} … ${partsLabel(res.end)}`,
+          hint:
+            maxGap != null && Number.isFinite(maxGap)
+              ? `or end beyond ${maxGap} UTC days after start`
+              : 'e.g. end before start / below minGap — snaps to minimum valid end',
+        });
+        /** End before start or under min gap repairs to same end as before — snap wheels off the invalid row. */
+        scrollHalf(0, res.start, tripleOrder, false);
+        scrollHalf(3, res.end, tripleOrder, false);
       }
     },
     [
@@ -483,8 +586,6 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
       enforceRangeGap,
       maxGap,
       minGap,
-      range.end,
-      range.start,
       scrollHalf,
       tripleOrder,
       yMax,

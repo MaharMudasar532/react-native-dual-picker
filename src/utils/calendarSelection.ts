@@ -146,11 +146,14 @@ export function applyCalendarEndWheel(
   }
 
   let pair = normalizeCalendarEnds(s0, e0);
+  let constraint: 'min-gap' | 'max-gap' | undefined;
+
   if (diffUtcCalendarDays(pair.start, pair.end) < minDays) {
     pair = {
       start: pair.start,
       end: repairEndAfterStartChange(pair.start, pair.end, minDays, maxGap),
     };
+    constraint = 'min-gap';
   }
   if (maxGap !== undefined && Number.isFinite(maxGap)) {
     if (diffUtcCalendarDays(pair.start, pair.end) > maxGap) {
@@ -158,6 +161,7 @@ export function applyCalendarEndWheel(
         start: pair.start,
         end: addCalendarDays(pair.start, Math.floor(maxGap)),
       };
+      constraint = 'max-gap';
     }
   }
   pair = {
@@ -168,7 +172,6 @@ export function applyCalendarEndWheel(
     start: pair.start,
     end: pair.end,
     lockReject: false,
-    constraint:
-      utcTimestamp(pair.end) !== utcTimestamp(e0) ? 'min-gap' : undefined,
+    constraint,
   };
 }

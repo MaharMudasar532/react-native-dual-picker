@@ -19,22 +19,40 @@ import type {
   DualPickerModeOptions,
   DualPickerPresentation,
   DualPickerRange,
+  DualPickerValue,
 } from 'react-native-dual-picker';
 import {
   DualPicker,
+  formatDualPickerTimeMinutes,
   normalizeDualPickerCalendarValue,
 } from 'react-native-dual-picker';
 
 const NUMERIC_DATA = Array.from({ length: 41 }, (_, i) => i + 5);
 
+/** Custom string list: `mode="range"` with string `data` uses index-based `minGap` / `maxGap`. */
+const CITY_DATA: string[] = [
+  'London',
+  'Paris',
+  'Tokyo',
+  'Sydney',
+  'Dubai',
+  'New York',
+  'Berlin',
+  'Madrid',
+  'Rome',
+  'Singapore',
+];
+
 type PresetId =
   | 'range'
+  | 'cities'
   | 'alphabet'
   | 'decimal'
   | 'month'
   | 'day'
   | 'weekday'
   | 'year'
+  | 'time'
   | 'date';
 
 type DualPickerCombinedRange =
@@ -46,10 +64,12 @@ type PresetConfig = {
   id: PresetId;
   label: string;
   mode: DualPickerMode;
-  /** For `range` only */
-  data?: number[];
+  /** For `range` / `dual`: numbers or strings (not mixed) */
+  data?: DualPickerValue[];
   modeOptions?: DualPickerModeOptions;
   initial: DualPickerCombinedRange;
+  showUnit?: boolean;
+  unit?: string;
 };
 
 function isCalendarPickerValue(
@@ -63,21 +83,40 @@ function isCalendarPickerValue(
   );
 }
 
-function presetMaxGap(m: DualPickerMode): number {
+function presetMaxGap(id: PresetId, m: DualPickerMode): number {
+  if (id === 'cities') return 6;
   if (m === 'range') return 12;
   if (m === 'alphabet') return 10;
   if (m === 'decimal') return 8;
-  if (m === 'date') return 400;
+  if (m === 'time') return 480;
+  /** Calendar mode: gap is whole UTC days between start and end (`maxGap` / `minGap`). */
+  if (m === 'date') return 3650;
   return 24;
 }
 
-function maxGapForMode(mode: DualPickerMode): number {
-  return presetMaxGap(mode);
+function formatWheelReadout(
+  mode: DualPickerMode,
+  v: DualPickerCombinedRange['start'],
+  modeOpts: DualPickerModeOptions | undefined,
+  timeUse12Hour?: boolean
+): string {
+  if (mode === 'time' && typeof v === 'number') {
+    const use12 =
+      timeUse12Hour !== undefined ? timeUse12Hour : !!modeOpts?.timeUse12Hour;
+    return formatDualPickerTimeMinutes(v, use12);
+  }
+  return String(v);
+}
+
+function maxGapForPreset(id: PresetId, mode: DualPickerMode): number {
+  return presetMaxGap(id, mode);
 }
 
 type AppDualPickerProps = {
   active: PresetConfig;
   activeModeOpts: DualPickerModeOptions | undefined;
+  /** Passed as `DualPicker` `timeUse12Hour` when `mode="time"`. */
+  timeUse12Hour?: boolean;
   value: DualPickerCombinedRange;
   onValueChange: (
     next: DualPickerCombinedRange,
@@ -94,6 +133,7 @@ type AppDualPickerProps = {
 function AppDualPicker({
   active,
   activeModeOpts,
+  timeUse12Hour,
   value,
   onValueChange,
   pickerWidth,
@@ -145,7 +185,10 @@ function AppDualPicker({
       autoShiftEnd
       data={active.data}
       minGap={1}
-      maxGap={maxGapForMode(active.mode)}
+      maxGap={maxGapForPreset(presetId, active.mode)}
+      showUnit={active.showUnit}
+      unit={active.unit}
+      {...(active.mode === 'time' ? { timeUse12Hour: !!timeUse12Hour } : {})}
       value={value}
       startLabel="From"
       endLabel="To"
@@ -156,7 +199,7 @@ function AppDualPicker({
       onChange={(next, meta) => {
         onValueChange(next as DualPickerCombinedRange, meta);
       }}
-      formatValue={(v) => String(v)}
+      {...(active.mode === 'time' ? {} : { formatValue: (v) => String(v) })}
       {...dateExtras}
       {...sheetChrome}
     />
@@ -199,6 +242,16 @@ const PRESETS: PresetConfig[] = [
     mode: 'range',
     data: NUMERIC_DATA,
     initial: { start: 10, end: 18 },
+    /** Demo: `showUnit` + `unit` — suffix after each wheel value (skip for built-in `mode="time"`). */
+    showUnit: true,
+    unit: 'pts',
+  },
+  {
+    id: 'cities',
+    label: 'Cities',
+    mode: 'range',
+    data: CITY_DATA,
+    initial: { start: 'Paris', end: 'Berlin' },
   },
   {
     id: 'alphabet',
@@ -248,6 +301,13 @@ const PRESETS: PresetConfig[] = [
     },
   },
   {
+    id: 'time',
+    label: 'Time',
+    mode: 'time',
+    modeOptions: { timeStepMinutes: 15 },
+    initial: { start: 540, end: 1020 },
+  },
+  {
     id: 'date',
     label: 'Date (calendar)',
     mode: 'date',
@@ -281,6 +341,8 @@ export default function App() {
   );
   const [reason, setReason] = useState<DualPickerChangeReason | undefined>();
   const [dateFormat, setDateFormat] = useState<DualPickerDateFormat>('iso');
+  const [timeUse12Hour, setTimeUse12Hour] = useState(false);
+  const [sheetTimeUse12Hour, setSheetTimeUse12Hour] = useState(false);
 
   const [sheetPresetId, setSheetPresetId] = useState<PresetId>('range');
   const sheetActive = useMemo(
@@ -333,7 +395,7 @@ export default function App() {
       value,
       activeModeOpts,
       1,
-      presetMaxGap('date')
+      presetMaxGap('date', 'date')
     );
   }, [active.mode, activeModeOpts, value]);
 
@@ -345,10 +407,29 @@ export default function App() {
       )} UTC days`;
     }
     if (typeof value.start === 'number' && typeof value.end === 'number') {
-      return String(value.end - value.start);
+      const delta = value.end - value.start;
+      if (active.mode === 'time') {
+        return `${delta} min`;
+      }
+      return String(delta);
+    }
+    if (
+      active.mode === 'range' &&
+      active.data &&
+      typeof value.start === 'string' &&
+      typeof value.end === 'string'
+    ) {
+      const list = active.data.filter(
+        (x): x is string => typeof x === 'string'
+      );
+      if (list.length === active.data.length && list.length > 0) {
+        const si = list.indexOf(value.start);
+        const ei = list.indexOf(value.end);
+        if (si >= 0 && ei >= 0) return `${ei - si} wheel steps`;
+      }
     }
     return '— (string / index)';
-  }, [calendarCanonForUi, value]);
+  }, [calendarCanonForUi, value, active.mode, active.data]);
 
   const onPickerChange = (
     next: DualPickerCombinedRange,
@@ -440,9 +521,41 @@ export default function App() {
             </ScrollView>
           ) : null}
 
+          {active.mode === 'time' ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+              nestedScrollEnabled
+            >
+              {(
+                [
+                  { v: false, label: '24-hour' },
+                  { v: true, label: '12-hour' },
+                ] as const
+              ).map(({ v, label }) => {
+                const sel = v === timeUse12Hour;
+                return (
+                  <Pressable
+                    key={label}
+                    onPress={() => setTimeUse12Hour(v)}
+                    style={[styles.chip, sel && styles.chipSelected]}
+                  >
+                    <Text
+                      style={[styles.chipText, sel && styles.chipTextSelected]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+
           <AppDualPicker
             active={active}
             activeModeOpts={activeModeOpts}
+            timeUse12Hour={timeUse12Hour}
             value={value}
             onValueChange={onPickerChange}
             pickerWidth={pickerWidth}
@@ -459,7 +572,12 @@ export default function App() {
               <Text style={styles.mono}>
                 {calendarCanonForUi
                   ? formatCalendarPartsLabel(calendarCanonForUi.start)
-                  : String(value.start)}
+                  : formatWheelReadout(
+                      active.mode,
+                      value.start,
+                      activeModeOpts,
+                      active.mode === 'time' ? timeUse12Hour : undefined
+                    )}
               </Text>
             </Text>
             <Text style={styles.readoutLine}>
@@ -467,7 +585,12 @@ export default function App() {
               <Text style={styles.mono}>
                 {calendarCanonForUi
                   ? formatCalendarPartsLabel(calendarCanonForUi.end)
-                  : String(value.end)}
+                  : formatWheelReadout(
+                      active.mode,
+                      value.end,
+                      activeModeOpts,
+                      active.mode === 'time' ? timeUse12Hour : undefined
+                    )}
               </Text>
             </Text>
             <Text style={styles.readoutLine}>
@@ -514,6 +637,37 @@ export default function App() {
             })}
           </View>
 
+          {sheetActive.mode === 'time' ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+              nestedScrollEnabled
+            >
+              {(
+                [
+                  { v: false, label: '24-hour' },
+                  { v: true, label: '12-hour' },
+                ] as const
+              ).map(({ v, label }) => {
+                const sel = v === sheetTimeUse12Hour;
+                return (
+                  <Pressable
+                    key={`sheet-${label}`}
+                    onPress={() => setSheetTimeUse12Hour(v)}
+                    style={[styles.chip, sel && styles.chipSelected]}
+                  >
+                    <Text
+                      style={[styles.chipText, sel && styles.chipTextSelected]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+
           <View style={styles.readout}>
             <Text style={styles.readoutLine}>
               <Text style={styles.label}>sheet mode</Text>{' '}
@@ -530,6 +684,7 @@ export default function App() {
       <AppDualPicker
         active={sheetActive}
         activeModeOpts={sheetActiveModeOpts}
+        timeUse12Hour={sheetTimeUse12Hour}
         value={sheetValue}
         onValueChange={onSheetPickerChange}
         pickerWidth={pickerWidth}

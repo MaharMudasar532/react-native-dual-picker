@@ -10,8 +10,9 @@ export type DualPickerRange = {
 };
 
 /**
- * Wheel dataset: `range` / `dual` use numeric `data`; preset modes build lists.
+ * Wheel dataset: `range` / `dual` use caller `data` — **all finite numbers** or **all non-empty strings** (e.g. city names), in wheel order; preset modes build lists.
  * `date` renders a six-wheel **calendar** (start/end each = year + month + day); use `DualPickerCalendarRange` **or** partial `DualPickerCalendarRangeInput`.
+ * `time` uses **`DualPickerRange`** with numeric **`start` / `end` as whole minutes** (minutes since midnight, 0–1439; see `DualPickerModeOptions` and root `timeUse12Hour`).
  */
 export type DualPickerMode =
   | 'range'
@@ -22,7 +23,8 @@ export type DualPickerMode =
   | 'year'
   | 'weekday'
   | 'alphabet'
-  | 'decimal';
+  | 'decimal'
+  | 'time';
 
 export type CalendarDateParts = {
   year: number;
@@ -86,6 +88,18 @@ export interface DualPickerModeOptions {
   defaultCalendarMonth?: number;
   /** `mode="date"`: fallback day when omitted (`1–31`, clamped to the resolved month). */
   defaultCalendarDay?: number;
+
+  /**
+   * `mode="time"`: step between wheel entries in **minutes** (1–60). List is `0 … 1439` aligned to this step.
+   * @default `15`
+   */
+  timeStepMinutes?: number;
+  /**
+   * `mode="time"`: use 12-hour labels (`1:30 PM`) instead of 24-hour (`13:30`).
+   * Overridden by root [`timeUse12Hour`](#) when that prop is set.
+   * @default `false`
+   */
+  timeUse12Hour?: boolean;
 }
 
 /**
@@ -124,7 +138,7 @@ export interface DualPickerProps {
    * @default true
    */
   autoShiftEnd?: boolean;
-  /** Required for `range` / `dual` (numeric wheel). Ignored by preset modes. */
+  /** Required for `range` / `dual`: ordered **numbers** or **strings** (not mixed). Ignored by preset modes. */
   data?: DualPickerValue[];
   /** Bounds / locales for preset `mode`s (`day`, `month`, …). */
   modeOptions?: DualPickerModeOptions;
@@ -143,6 +157,21 @@ export interface DualPickerProps {
   enforceRangeGap?: boolean;
   step?: number;
   formatValue?: (value: DualPickerValue) => string;
+  /**
+   * `mode="time"` only: `true` → 12-hour wheel labels (`1:30 PM`), `false` → 24-hour (`13:30`).
+   * Takes precedence over `modeOptions.timeUse12Hour`.
+   */
+  timeUse12Hour?: boolean;
+  /**
+   * When `true` and `unit` is a non-empty string, each wheel row appends the unit after the formatted value.
+   * Avoid with built-in `mode="time"` formatter (clock labels are already unambiguous).
+   * @default false
+   */
+  showUnit?: boolean;
+  /** Unit label when `showUnit` is true (e.g. `"kg"` for plain numeric wheels). */
+  unit?: string;
+  /** Text style for the unit suffix on wheel rows (merged after defaults). */
+  unitTextStyle?: StyleProp<TextStyle>;
   /**
    * For `mode="date"`: accept `DualPickerCalendarRange` or partial `DualPickerCalendarRangeInput`. Missing fields on each half resolve from optional `modeOptions.defaultCalendar*` (when set), then the device's local date; day columns use that month's length.
    */

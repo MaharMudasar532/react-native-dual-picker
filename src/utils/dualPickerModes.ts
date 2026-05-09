@@ -24,6 +24,27 @@ function fracDigits(step: number): number {
   return i < 0 ? 0 : s.length - i - 1;
 }
 
+function steppedMinuteList(
+  from: number,
+  toInclusive: number,
+  step: number
+): number[] {
+  const s = Math.max(1, Math.floor(step));
+  const hi = Math.max(from, Math.floor(toInclusive));
+  const out: number[] = [];
+  for (let m = from; m <= hi; m += s) {
+    out.push(m);
+  }
+  if (out.length === 0) out.push(from);
+  return out;
+}
+
+/** Minutes since midnight, `0 … 1439` stepped. */
+function buildTimeOfDayList(stepMinutes: number): number[] {
+  const step = Math.max(1, Math.min(60, Math.floor(stepMinutes)));
+  return steppedMinuteList(0, 1440 - step, step);
+}
+
 function decimalList(from: number, to: number, step: number): number[] {
   if (!Number.isFinite(from + to + step) || step <= 0) return [from];
   const decimals = fracDigits(step);
@@ -139,8 +160,20 @@ function buildWeekdayList(o: DualPickerModeOptions): DualPickerDatum[] {
   }
 }
 
+function uniqueStringsPreserveOrder(raw: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of raw) {
+    if (s.length === 0) continue;
+    if (seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
 /**
- * Computes ordered wheel entries for preset `mode`. `range`/`dual` use caller `data` (numbers).
+ * Computes ordered wheel entries for preset `mode`. `range`/`dual` use caller `data` (numbers or strings).
  */
 export function resolveModeSorted(
   mode: DualPickerMode,
@@ -152,16 +185,40 @@ export function resolveModeSorted(
 
   if (mode === 'range' || mode === 'dual') {
     const d = rawData ?? [];
-    const nums: number[] = [];
-    for (const v of d) {
-      if (typeof v === 'number' && Number.isFinite(v)) nums.push(v);
-    }
-    if (nums.length === 0) {
+    if (d.length === 0) {
       throw new RangeError(
-        '[DualPicker] `mode="range"` requires numeric `data`.'
+        '[DualPicker] `mode="range"` requires non-empty `data`.'
       );
     }
-    return maybeApplyStep(sortUniqueNumbers(nums), step);
+    const nums = d.filter(
+      (v): v is number => typeof v === 'number' && Number.isFinite(v)
+    );
+    const strs = d.filter((v): v is string => typeof v === 'string');
+    if (nums.length > 0 && strs.some((s) => s.length > 0)) {
+      throw new RangeError(
+        '[DualPicker] `mode="range"` `data` must be all numbers or all strings — do not mix.'
+      );
+    }
+    if (nums.length > 0) {
+      if (nums.length !== d.length) {
+        throw new RangeError(
+          '[DualPicker] `mode="range"` numeric `data` must contain only finite numbers.'
+        );
+      }
+      return maybeApplyStep(sortUniqueNumbers(nums), step);
+    }
+    const nonEmpty = strs.filter((s) => s.length > 0);
+    if (nonEmpty.length > 0) {
+      if (nonEmpty.length !== d.length) {
+        throw new RangeError(
+          '[DualPicker] `mode="range"` string `data` entries must be non-empty strings.'
+        );
+      }
+      return uniqueStringsPreserveOrder(nonEmpty);
+    }
+    throw new RangeError(
+      '[DualPicker] `mode="range"` `data` must be finite numbers or non-empty strings.'
+    );
   }
 
   switch (mode) {
@@ -189,6 +246,8 @@ export function resolveModeSorted(
       const s = o.decimalStep ?? 0.05;
       return decimalList(from, to, s);
     }
+    case 'time':
+      return buildTimeOfDayList(o.timeStepMinutes ?? 15);
     default:
       throw new RangeError(`[DualPicker] Unknown mode "${String(mode)}".`);
   }
