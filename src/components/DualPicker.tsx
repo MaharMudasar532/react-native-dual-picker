@@ -394,6 +394,8 @@ function DualPickerSheetModal(props: SheetModalProps) {
     sheetSwipeToDismiss !== false ? grabberPan.panHandlers : undefined;
   const swipeMoveOn =
     sheetSwipeToDismiss !== false ? movePan.panHandlers : undefined;
+  const swipeEnabled = sheetSwipeToDismiss !== false;
+  const grabberEnabled = sheetShowGrabber !== false && swipeEnabled;
 
   const backdropAnimatedStyle = {
     opacity: backdropOpacity.interpolate({
@@ -428,7 +430,12 @@ function DualPickerSheetModal(props: SheetModalProps) {
   if (renderSheetHeader) {
     header = renderSheetHeader();
   } else if (sheetShowHeader) {
-    const showTrailing = sheetShowDoneButton !== false;
+    /**
+     * Keep top chrome minimal:
+     * - If grabber is active (swipe enabled), hide trailing close/done.
+     * - If swipe is disabled, hide grabber and show trailing control.
+     */
+    const showTrailing = sheetShowDoneButton !== false && !grabberEnabled;
 
     const trailing = !showTrailing ? null : sheetHeaderTrailing === 'done' ? (
       <View style={defaultSheetStyles.headerSide}>
@@ -464,7 +471,7 @@ function DualPickerSheetModal(props: SheetModalProps) {
         <View style={defaultSheetStyles.headerSide} />
         <View
           style={defaultSheetStyles.titlePanStrip}
-          {...(sheetShowGrabber === false ? (swipeMoveOn ?? {}) : {})}
+          {...(!grabberEnabled ? (swipeMoveOn ?? {}) : {})}
           collapsable={false}
         >
           {sheetTitle != null ? (
@@ -484,7 +491,7 @@ function DualPickerSheetModal(props: SheetModalProps) {
       </View>
     );
 
-    if (sheetShowGrabber !== false) {
+    if (grabberEnabled) {
       grabber = (
         <View
           style={defaultSheetStyles.grabberRow}

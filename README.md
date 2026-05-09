@@ -1,36 +1,40 @@
-# React Native Dual Picker
+# React Native Dual Picker (Range, Date, Bottom Sheet)
 
 **Dual wheel picker** for **React Native** (iOS & Android): choose a **from** and **to** value with two side‑by‑side **scroll wheels**. Supports **numeric range**, **date / calendar range** (year · month · day), **month**, **day of month**, **weekday**, **year**, **alphabet**, and **decimal** modes—with **min/max gap** rules, **clamp** behaviors, optional **bottom sheet** presentation, and full **TypeScript** typings.
 
 > **Keywords:** `react-native` · `dual-picker` · `range-picker` · `wheel-picker` · `scroll-picker` · `date-range-picker` · `calendar-picker` · `month-picker` · `day-picker` · `bottom-sheet` · `two-column-picker` · `from-to-picker` · `react-native-ui` · `ios` · `android`
 
+React Native Dual Picker is a production-ready **React Native range picker** and **date range picker** with dual wheels, optional **bottom sheet picker** presentation, and full TypeScript support for iOS and Android apps.
+
 <!--
   Media URLs must be absolute: npmjs.com and many previews do not resolve ./relative paths.
-  Primary: github.com/.../raw/main (works for public repos in most browsers).
-  If images 404: push `main`, confirm files exist at repo root, or swap owner/repo for your fork.
-  Optional mirror (public repos): https://cdn.jsdelivr.net/gh/MaharMudasar532/react-native-dual-picker@main/dualpicker.gif
+  Primary: github.com/.../raw/master (works for public repos in most browsers).
+  If images 404: push `master`, confirm files exist at repo root, or swap owner/repo for your fork.
+  Optional mirror (public repos): https://cdn.jsdelivr.net/gh/MaharMudasar532/react-native-dual-picker@master/withoutbottom.gif
 -->
 
 ---
 
-## Demo (GIF)
+## Demos (GIFs)
 
 <p align="center">
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/dualpicker.gif" alt="React Native dual picker — range mode, From and To wheels, gap enforcement" width="360" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/withoutbottom.gif" alt="Dual picker inline demo — without bottom sheet" width="47%" />
+  &nbsp;
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/bottomsheet.gif" alt="Dual picker bottom sheet demo" width="47%" />
 </p>
 
-<p align="center"><em>Example: <strong>range</strong> mode with min/max gap.</em></p>
+<p align="center"><em>Left: inline picker · Right: bottom sheet picker.</em></p>
 
 ---
 
 ## Screenshots
 
 <p align="center">
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/Screenshot_1778299828.png" alt="Dual picker — presets and calendar modes" width="32%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778299828.png" alt="Dual picker — presets and calendar modes" width="32%" />
   &nbsp;
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/Screenshot_1778299830.png" alt="Dual picker — date wheels ISO EU US" width="32%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778299830.png" alt="Dual picker — date wheels ISO EU US" width="32%" />
   &nbsp;
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/Screenshot_1778299832.png" alt="Dual picker — From To numeric range" width="32%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778299832.png" alt="Dual picker — From To numeric range" width="32%" />
 </p>
 
 <p align="center">
@@ -38,7 +42,7 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/Screenshot_1778300880.png" alt="Dual picker — bottom sheet with grabber, title, close, wheels" width="70%" />
+  <img src="https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/Screenshot_1778300880.png" alt="Dual picker — bottom sheet with grabber, title, close, wheels" width="70%" />
 </p>
 
 <p align="center">
@@ -47,12 +51,12 @@
 
 ### Media URLs (GIF & PNGs)
 
-**Yes — for a normal public GitHub repo they are addressed:** every image uses an absolute URL to **`main`** on  
-`https://github.com/MaharMudasar532/react-native-dual-picker/raw/main/…`  
+**Yes — for a normal public GitHub repo they are addressed:** every image uses an absolute URL to **`master`** on  
+`https://github.com/MaharMudasar532/react-native-dual-picker/raw/master/…`  
 so the README renders on **GitHub**, **npm**, and most previews (unlike `./relative.png`, which npm cannot resolve).
 
-If a thumbnail still breaks: confirm the repo is **public**, the files exist on **`main`**, and you are not behind a network that blocks `github.com`/`raw`. For a **fork**, replace **`MaharMudasar532/react-native-dual-picker`** with your **`owner/repo`**. Optional CDN mirror (same files):  
-`https://cdn.jsdelivr.net/gh/MaharMudasar532/react-native-dual-picker@main/dualpicker.gif` (swap the filename for each asset).
+If a thumbnail still breaks: confirm the repo is **public**, the files exist on **`master`**, and you are not behind a network that blocks `github.com`/`raw`. For a **fork**, replace **`MaharMudasar532/react-native-dual-picker`** with your **`owner/repo`**. Optional CDN mirror (same files):  
+`https://cdn.jsdelivr.net/gh/MaharMudasar532/react-native-dual-picker@master/withoutbottom.gif` (swap the filename for each asset).
 
 ---
 
@@ -65,6 +69,19 @@ If a thumbnail still breaks: confirm the repo is **public**, the files exist on 
 - **Partial `value`** for date mode + **`modeOptions.defaultCalendar*`** fallbacks + local “today”  
 - **`presentation="sheet"`** — modal, animated backdrop, swipe-to-dismiss, customizable chrome  
 - **`PickerColumn`**, **`useDualPicker`** for custom UIs  
+
+---
+
+## SEO Keywords
+
+Useful search terms this package targets:
+
+- `react native range picker`
+- `react native date range picker`
+- `react native dual wheel picker`
+- `react native bottom sheet picker`
+- `react native from to picker`
+- `react native calendar range picker`
 
 ---
 

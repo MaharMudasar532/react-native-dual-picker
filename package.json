@@ -1,6 +1,6 @@
 {
   "name": "react-native-dual-picker",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "React Native dual wheel picker: from/to range selection with scroll wheels — numeric range, date & calendar range (Y/M-D), month, day, weekday, year, alphabet, decimals; min/max gap, ISO/EU/US date layouts, TypeScript.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -18,7 +18,8 @@
     "android",
     "ios",
     "cpp",
-    "dualpicker.gif",
+    "withoutbottom.gif",
+    "bottomsheet.gif",
     "Screenshot_1778299828.png",
     "Screenshot_1778299830.png",
     "Screenshot_1778299832.png",

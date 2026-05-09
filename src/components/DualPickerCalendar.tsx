@@ -40,6 +40,7 @@ import {
 } from './PickerColumn';
 
 const DEFAULT_VISIBLE = 5;
+const PROGRAMMATIC_SETTLE_WINDOW_MS = 700;
 
 function scheduleDoubleRaf(cb: () => void): number {
   return requestAnimationFrame(() => {
@@ -204,6 +205,9 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
   const expectedProgrammaticPickRef = useRef<
     [number[], number[], number[], number[], number[], number[]]
   >([[], [], [], [], [], []]);
+  const expectedProgrammaticPickExpiryRef = useRef<
+    [number, number, number, number, number, number]
+  >([0, 0, 0, 0, 0, 0]);
   const pendingFlushRef = useRef<number | null>(null);
   const scrollQueueRef = useRef<
     Array<{ scroll: (y: number, a: boolean) => void; y: number; a: boolean }>
@@ -252,6 +256,8 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
               : Number.NaN;
         if (Number.isFinite(expect)) {
           expectedProgrammaticPickRef.current[ix].push(expect);
+          expectedProgrammaticPickExpiryRef.current[ix] =
+            Date.now() + PROGRAMMATIC_SETTLE_WINDOW_MS;
         }
       }
       const y = yForIndex(idx, rowHeight);
@@ -361,12 +367,22 @@ export function DualPickerCalendar(props: DualPickerProps & { mode: 'date' }) {
     (ix: 0 | 1 | 2 | 3 | 4 | 5, picked: number): boolean => {
       const q = expectedProgrammaticPickRef.current[ix];
       if (q.length === 0) return false;
+      const expiresAt = expectedProgrammaticPickExpiryRef.current[ix];
+      if (Date.now() > expiresAt) {
+        q.length = 0;
+        expectedProgrammaticPickExpiryRef.current[ix] = 0;
+        return false;
+      }
       const head = q[0];
       if (head !== undefined && head === picked) {
         q.shift();
+        if (q.length === 0) {
+          expectedProgrammaticPickExpiryRef.current[ix] = 0;
+        }
         return true;
       }
       q.length = 0;
+      expectedProgrammaticPickExpiryRef.current[ix] = 0;
       return false;
     },
     []
