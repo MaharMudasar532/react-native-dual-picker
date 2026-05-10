@@ -309,8 +309,8 @@ export const PickerColumn = forwardRef<PickerColumnHandle, PickerColumnProps>(
                     <Text
                       style={[
                         styles.itemUnitText,
-                        unitTextStyle,
                         selected && styles.itemUnitTextSelected,
+                        unitTextStyle,
                       ]}
                       {...(Platform.OS === 'android' && {
                         includeFontPadding: false,

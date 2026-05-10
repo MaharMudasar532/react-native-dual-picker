@@ -8,6 +8,7 @@ export { PickerColumn } from './components/PickerColumn';
 export { useDualPicker } from './hooks/useDualPicker';
 export type {
   DualPickerClampBehavior,
+  DualPickerColorScheme,
   DualPickerProps,
   DualPickerPresentation,
   DualPickerRange,

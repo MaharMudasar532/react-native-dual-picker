@@ -10,10 +10,16 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useColorScheme,
   View,
 } from 'react-native';
 import type { PanResponderGestureState } from 'react-native';
 import type { DualPickerProps } from '../types';
+import {
+  dualPickerSheetThemeChrome,
+  mergeDarkModePickerProps,
+  resolveDualPickerColorScheme,
+} from '../utils/dualPickerColorScheme';
 import { omitSheetPresentationProps } from '../utils/omitSheetPresentationProps';
 import { DualPickerCalendar } from './DualPickerCalendar';
 import { DualPickerRangeView } from './DualPickerRangeView';
@@ -228,11 +234,15 @@ function createSheetPanResponder(
   });
 }
 
-type SheetModalProps = DualPickerProps & { innerBody: ReactNode };
+type SheetModalProps = DualPickerProps & {
+  innerBody: ReactNode;
+  resolvedColorScheme: 'light' | 'dark';
+};
 
 function DualPickerSheetModal(props: SheetModalProps) {
   const {
     innerBody,
+    resolvedColorScheme,
     sheetVisible = false,
     onSheetVisibleChange,
     sheetAnimationType: sheetAnimationTypeProp,
@@ -263,6 +273,11 @@ function DualPickerSheetModal(props: SheetModalProps) {
     sheetSwipeDismissVelocity = 0.35,
     sheetAnimateTransitions = true,
   } = props;
+
+  const sheetChrome = useMemo(
+    () => dualPickerSheetThemeChrome(resolvedColorScheme),
+    [resolvedColorScheme]
+  );
 
   /** `slide`/`fade` on Modal fights our sheet motion — default `none` for smooth open/close. */
   const sheetAnimationType = sheetAnimationTypeProp ?? 'none';
@@ -445,7 +460,13 @@ function DualPickerSheetModal(props: SheetModalProps) {
           accessibilityRole="button"
           accessibilityLabel={sheetDoneLabel}
         >
-          <Text style={[defaultSheetStyles.done, sheetDoneTextStyle]}>
+          <Text
+            style={[
+              defaultSheetStyles.done,
+              sheetChrome.done,
+              sheetDoneTextStyle,
+            ]}
+          >
             {sheetDoneLabel}
           </Text>
         </Pressable>
@@ -457,9 +478,19 @@ function DualPickerSheetModal(props: SheetModalProps) {
           hitSlop={hitSlop}
           accessibilityRole="button"
           accessibilityLabel={sheetCloseAccessibilityLabel}
-          style={[defaultSheetStyles.closeButton, sheetCloseButtonStyle]}
+          style={[
+            defaultSheetStyles.closeButton,
+            sheetChrome.closeButton,
+            sheetCloseButtonStyle,
+          ]}
         >
-          <Text style={[defaultSheetStyles.closeGlyph, sheetCloseIconStyle]}>
+          <Text
+            style={[
+              defaultSheetStyles.closeGlyph,
+              sheetChrome.closeGlyph,
+              sheetCloseIconStyle,
+            ]}
+          >
             ×
           </Text>
         </Pressable>
@@ -477,7 +508,11 @@ function DualPickerSheetModal(props: SheetModalProps) {
           {sheetTitle != null ? (
             typeof sheetTitle === 'string' || typeof sheetTitle === 'number' ? (
               <Text
-                style={[defaultSheetStyles.title, sheetTitleStyle]}
+                style={[
+                  defaultSheetStyles.title,
+                  sheetChrome.title,
+                  sheetTitleStyle,
+                ]}
                 numberOfLines={1}
               >
                 {sheetTitle}
@@ -498,7 +533,7 @@ function DualPickerSheetModal(props: SheetModalProps) {
           {...(swipeOn ?? {})}
           collapsable={false}
         >
-          <View style={defaultSheetStyles.grabber} />
+          <View style={[defaultSheetStyles.grabber, sheetChrome.grabber]} />
         </View>
       );
     }
@@ -535,6 +570,7 @@ function DualPickerSheetModal(props: SheetModalProps) {
           <Animated.View
             style={[
               defaultSheetStyles.card,
+              sheetChrome.card,
               sheetCardStyle,
               { transform: [{ translateY }] },
             ]}
@@ -557,8 +593,17 @@ function DualPickerSheetModal(props: SheetModalProps) {
 }
 
 export function DualPicker(props: DualPickerProps) {
+  const systemScheme = useColorScheme();
   const presentation = props.presentation ?? 'inline';
-  const innerProps = omitSheetPresentationProps(props);
+  const resolvedScheme = resolveDualPickerColorScheme(
+    props.colorScheme,
+    systemScheme
+  );
+
+  let innerProps = omitSheetPresentationProps(props);
+  if (resolvedScheme === 'dark') {
+    innerProps = mergeDarkModePickerProps(innerProps);
+  }
 
   const innerBody =
     props.mode === 'date' ? (
@@ -571,5 +616,11 @@ export function DualPicker(props: DualPickerProps) {
     return innerBody;
   }
 
-  return <DualPickerSheetModal {...props} innerBody={innerBody} />;
+  return (
+    <DualPickerSheetModal
+      {...props}
+      innerBody={innerBody}
+      resolvedColorScheme={resolvedScheme}
+    />
+  );
 }

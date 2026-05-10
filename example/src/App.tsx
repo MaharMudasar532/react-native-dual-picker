@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useColorScheme,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -14,6 +15,7 @@ import type {
   DualPickerCalendarRange,
   DualPickerCalendarRangeInput,
   DualPickerChangeReason,
+  DualPickerColorScheme,
   DualPickerDateFormat,
   DualPickerMode,
   DualPickerModeOptions,
@@ -128,6 +130,8 @@ type AppDualPickerProps = {
   presentation?: DualPickerPresentation;
   sheetVisible?: boolean;
   onSheetVisibleChange?: (visible: boolean) => void;
+  /** Passed through to library `DualPicker` (e.g. `'system'` for sheet + device theme). */
+  colorScheme?: DualPickerColorScheme;
 };
 
 function AppDualPicker({
@@ -142,9 +146,15 @@ function AppDualPicker({
   presentation = 'inline',
   sheetVisible,
   onSheetVisibleChange,
+  colorScheme,
 }: AppDualPickerProps) {
+  const deviceScheme = useColorScheme();
+  const sheetUsesDarkChrome =
+    colorScheme === 'dark' ||
+    (colorScheme === 'system' && deviceScheme === 'dark');
+
   const dateExtras =
-    active.mode === 'date'
+    active.mode === 'date' && !sheetUsesDarkChrome
       ? {
           dateTitle: 'Customize via date* props',
           dateTitleStyle: styles.datePickerTitleText,
@@ -160,19 +170,28 @@ function AppDualPicker({
           headerLabelStartStyle: styles.datePickerHeaderStart,
           headerLabelEndStyle: styles.datePickerHeaderEnd,
         }
-      : {};
+      : active.mode === 'date'
+        ? {}
+        : {};
 
   const sheetChrome =
     presentation === 'sheet'
       ? {
           sheetTitle: 'Bottom sheet',
-          sheetTitleStyle: styles.sheetTitleText,
-          sheetHeaderRowStyle: styles.sheetHeaderRow,
-          sheetCardStyle: styles.sheetCard,
-          sheetBackdropStyle: styles.sheetBackdrop,
-          sheetPickerWrapperStyle: styles.sheetPickerWrapper,
-          sheetCloseButtonStyle: styles.sheetCloseButton,
-          sheetCloseIconStyle: styles.sheetCloseIcon,
+          ...(sheetUsesDarkChrome
+            ? {
+                sheetBackdropStyle: styles.sheetBackdrop,
+                sheetPickerWrapperStyle: styles.sheetPickerWrapper,
+              }
+            : {
+                sheetTitleStyle: styles.sheetTitleText,
+                sheetHeaderRowStyle: styles.sheetHeaderRow,
+                sheetCardStyle: styles.sheetCard,
+                sheetBackdropStyle: styles.sheetBackdrop,
+                sheetPickerWrapperStyle: styles.sheetPickerWrapper,
+                sheetCloseButtonStyle: styles.sheetCloseButton,
+                sheetCloseIconStyle: styles.sheetCloseIcon,
+              }),
         }
       : {};
 
@@ -192,7 +211,12 @@ function AppDualPicker({
       value={value}
       startLabel="From"
       endLabel="To"
-      headerLabelStyle={styles.pickerHeaderLabel}
+      headerLabelStyle={
+        sheetUsesDarkChrome && active.mode !== 'date'
+          ? undefined
+          : styles.pickerHeaderLabel
+      }
+      colorScheme={colorScheme}
       presentation={presentation}
       sheetVisible={sheetVisible}
       onSheetVisibleChange={onSheetVisibleChange}
@@ -358,6 +382,10 @@ export default function App() {
   const [sheetDateFormat, setSheetDateFormat] =
     useState<DualPickerDateFormat>('iso');
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [darkDemoValue, setDarkDemoValue] = useState<DualPickerRange>({
+    start: 12,
+    end: 24,
+  });
 
   useEffect(() => {
     const p = PRESETS.find((x) => x.id === presetId) ?? firstPreset;
@@ -456,8 +484,8 @@ export default function App() {
       >
         <Text style={styles.title}>Dual picker examples</Text>
         <Text style={styles.blurb}>
-          Two sections below: an inline picker and a bottom-sheet picker. Try
-          all modes from the chips/buttons.
+          Inline picker, a dark-mode sample, and a bottom sheet. Try all modes
+          from the chips/buttons.
         </Text>
 
         <View style={styles.sectionBlock}>
@@ -604,10 +632,52 @@ export default function App() {
           </View>
         </View>
 
+        <View style={styles.darkSectionBlock}>
+          <Text style={styles.darkSectionTitle}>Dark appearance (inline)</Text>
+          <Text style={styles.darkSectionNote}>
+            Same numeric range as “Numbers”, using the library{' '}
+            <Text style={styles.darkMonoInline}>
+              colorScheme=&quot;dark&quot;
+            </Text>{' '}
+            on a dark card so you can compare with the light block above.
+          </Text>
+          <View style={styles.darkPickerShell}>
+            <DualPicker
+              mode="range"
+              colorScheme="dark"
+              data={NUMERIC_DATA}
+              value={darkDemoValue}
+              minGap={1}
+              maxGap={12}
+              clampBehavior="push-end"
+              autoShiftEnd
+              startLabel="From"
+              endLabel="To"
+              formatValue={(v) => String(v)}
+              showUnit
+              unit="pts"
+              onChange={(next) => setDarkDemoValue(next as DualPickerRange)}
+            />
+          </View>
+          <View style={styles.darkReadout}>
+            <Text style={styles.darkReadoutLine}>
+              <Text style={styles.darkReadoutLabel}>start</Text>{' '}
+              <Text style={styles.darkReadoutMono}>{darkDemoValue.start}</Text>
+            </Text>
+            <Text style={styles.darkReadoutLine}>
+              <Text style={styles.darkReadoutLabel}>end</Text>{' '}
+              <Text style={styles.darkReadoutMono}>{darkDemoValue.end}</Text>
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionTitle}>Bottom sheet (all modes)</Text>
           <Text style={styles.sectionNote}>
-            Tap any mode to open it in the sheet.
+            Tap any mode to open it in the sheet. Chrome follows the device
+            light/dark setting (
+            <Text style={styles.mono}>colorScheme=&quot;system&quot;</Text>
+            ).
           </Text>
           <View style={styles.sheetTypeGrid}>
             {PRESETS.map((p) => {
@@ -690,6 +760,7 @@ export default function App() {
         pickerWidth={pickerWidth}
         presetId={sheetPresetId}
         presentation="sheet"
+        colorScheme="system"
         sheetVisible={bottomSheetOpen}
         onSheetVisibleChange={setBottomSheetOpen}
       />
@@ -748,6 +819,82 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     marginBottom: 12,
+  },
+  darkSectionBlock: {
+    width: '100%',
+    maxWidth: 420,
+    marginBottom: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#1C1C1E',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#3A3A3C',
+  },
+  darkSectionTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#F2F2F7',
+    marginBottom: 6,
+    letterSpacing: -0.2,
+  },
+  darkSectionNote: {
+    fontSize: 13,
+    color: '#AEAEB2',
+    marginBottom: 14,
+    lineHeight: 19,
+  },
+  darkMonoInline: {
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
+    fontSize: 12,
+    color: '#EBEBF5',
+    fontWeight: '600',
+  },
+  darkPickerShell: {
+    alignSelf: 'center',
+    width: '100%',
+    backgroundColor: '#2C2C2E',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#48484A',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  darkReadout: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#2C2C2E',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#48484A',
+    gap: 6,
+  },
+  darkReadoutLine: {
+    fontSize: 15,
+    color: '#F2F2F7',
+  },
+  darkReadoutLabel: {
+    fontWeight: '600',
+    color: '#8E8E93',
+    textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: 0.7,
+  },
+  darkReadoutMono: {
+    fontVariant: ['tabular-nums'],
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
+    fontWeight: '600',
+    color: '#F2F2F7',
   },
   chipRow: {
     flexDirection: 'row',

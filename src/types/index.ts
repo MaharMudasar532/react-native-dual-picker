@@ -126,6 +126,12 @@ export type DualPickerChangeReason =
 /** Where the picker is rendered: in layout (`inline`) or inside a bottom [`Modal`](https://reactnative.dev/docs/modal) shell (`sheet`). */
 export type DualPickerPresentation = 'inline' | 'sheet';
 
+/**
+ * Light/dark appearance for default colors (wheels, headers, and sheet chrome when [`presentation`](#) is `'sheet'`).
+ * @default `'light'` — matches existing releases. Use `'system'` with the device [`useColorScheme`](https://reactnative.dev/docs/usecolorscheme), or force `'dark'` / `'light'`.
+ */
+export type DualPickerColorScheme = 'light' | 'dark' | 'system';
+
 export interface DualPickerProps {
   /**
    * Prefer `'range'` (behavior-focused). `'dual'` is a legacy synonym for `'range'`.
@@ -289,6 +295,9 @@ export interface DualPickerProps {
   dateSelectionLaneBackgroundColor?: string;
 
   // --- Bottom sheet [`Modal`](https://reactnative.dev/docs/modal) (optional) ---
+
+  /** @default `'light'` */
+  colorScheme?: DualPickerColorScheme;
 
   /**
    * `'inline'` — render wheels only (default). `'sheet'` — wrap wheels in a slide-up `Modal` with backdrop; control with [`sheetVisible`](#) / [`onSheetVisibleChange`](#).

@@ -1,6 +1,7 @@
 import type { DualPickerProps } from '../types';
 
 const SHEET_KEYS = new Set<string>([
+  'colorScheme',
   'presentation',
   'sheetVisible',
   'onSheetVisibleChange',
